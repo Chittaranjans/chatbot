@@ -34,7 +34,7 @@ export function ChatMessageListDemo() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
@@ -49,17 +49,34 @@ export function ChatMessageListDemo() {
     setInput("");
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch("http://localhost:3001/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: input }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
       setMessages((prev) => [
         ...prev,
         {
           id: prev.length + 1,
-          content: "This is an AI response to your message.",
+          content: data.reply, // Assuming the API returns a field named 'reply'
           sender: "ai",
         },
       ]);
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleAttachFile = () => {
@@ -69,16 +86,22 @@ export function ChatMessageListDemo() {
   const handleMicrophoneClick = () => {
     //
   };
-
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as FormEvent);
+    }
+  };
+  
   return (
     <div className="h-[96vh]  border bg-background rounded-lg flex flex-col">
       <div className="flex-1 overflow-hidden ">
         <ExpandableChatHeader className="flex-col text-center justify-center">
-                  <h1 className="text-xl font-semibold">Chat with AI ✨</h1>
-                  <p className="text-sm text-muted-foreground">
-                    Ask me anything about the components
-                  </p>
-                </ExpandableChatHeader>
+          <h1 className="text-xl font-semibold">Chat with AI ✨</h1>
+          <p className="text-sm text-muted-foreground">
+            Ask me anything about the components
+          </p>
+        </ExpandableChatHeader>
         <ChatMessageList>
           {messages.map((message) => (
             <ChatBubble
@@ -101,7 +124,7 @@ export function ChatMessageListDemo() {
               </ChatBubbleMessage>
             </ChatBubble>
           ))}
-
+  
           {isLoading && (
             <ChatBubble variant="received">
               <ChatBubbleAvatar
@@ -114,7 +137,7 @@ export function ChatMessageListDemo() {
           )}
         </ChatMessageList>
       </div>
-
+  
       <div className="p-4 border-t">
         <form
           onSubmit={handleSubmit}
@@ -123,6 +146,7 @@ export function ChatMessageListDemo() {
           <ChatInput
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             className="min-h-12 resize-none rounded-lg bg-background border-0 p-3 shadow-none focus-visible:ring-0"
           />
@@ -136,7 +160,7 @@ export function ChatMessageListDemo() {
               >
                 <Paperclip className="size-4" />
               </Button>
-
+  
               <Button
                 variant="ghost"
                 size="icon"
@@ -155,4 +179,5 @@ export function ChatMessageListDemo() {
       </div>
     </div>
   );
+
 }
